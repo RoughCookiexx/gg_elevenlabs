@@ -10,6 +10,47 @@ import (
 	"os"
 )
 
+func GenerateSoundEffect(text string) ([]byte, error) {
+	fmt.Println("Sending request to Elevenlabs")
+	apiKey := os.Getenv("ELEVENLABS_API_KEY")
+	if apiKey == "" {
+		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
+		os.Exit(1)
+	}
+
+	body, err := json.Marshal(map[string]string{
+		"text": text,
+	})
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshalling JSON: %v\n", err)
+		os.Exit(1)
+	}
+
+	req, _ := http.NewRequest("POST", "https://api.elevenlabs.io/v1/sound-generation", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("xi-api-key", apiKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		fmt.Fprintf(os.Stderr, "Error from ElevenLabs API (Status %d): %s\n", resp.StatusCode, string(bodyBytes))
+		os.Exit(1)
+	}
+
+	audioBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR ERROR ERROR")
+		os.Exit(1)
+	}
+	return audioBytes, nil
+}
+
 func TextToSpeech(voiceID string, text string)  []byte {
 	fmt.Println("Sending request to Elevenlabs")
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
