@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -110,3 +111,78 @@ func TextToSpeech(voiceID string, text string)  []byte {
 	return audioBytes
 }
 
+
+func GetVoiceIDs() ([]string, error) {
+	url := "https://api.elevenlabs.io/v1/voices"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("xi-api-key", apiKey)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	body, _ := ioutil.ReadAll(res.Body)
+
+	var result map[string]interface{}
+	json.Unmarshal(body, &result)
+
+	var ids []string
+	voices, ok := result["voices"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("could not parse voices")
+	}
+
+	for _, v := range voices {
+		voiceMap, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if id, ok := voiceMap["voice_id"].(string); ok {
+			ids = append(ids, id)
+		}
+	}
+
+	return ids, nil
+}
+
+
+func AddSharedVoice(publicUserID, voiceID, newName string) error {
+	apiKey := os.Getenv("ELEVENLABS_API_KEY")
+	if apiKey == "" {
+		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
+		os.Exit(1)
+	}
+
+	url := fmt.Sprintf("https://api.elevenlabs.io/v1/voices/add/%s/%s", publicUserID, voiceID)
+	
+	payload := map[string]string{
+		"new_name": newName,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Xi-Api-Key", apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to add voice, status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
