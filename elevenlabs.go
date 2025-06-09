@@ -113,6 +113,10 @@ func TextToSpeech(voiceID string, text string)  []byte {
 
 
 func GetVoiceIDs() ([]string, error) {
+	if apiKey == "" {
+		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
+		os.Exit(1)
+	}
 	url := "https://api.elevenlabs.io/v1/voices"
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("xi-api-key", apiKey)
