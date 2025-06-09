@@ -12,7 +12,7 @@ import (
 )
 
 func GenerateSoundEffect(text string) ([]byte, error) {
-	fmt.Println("Sending request to Elevenlabs")
+	fmt.Printf("Sending request to Elevenlabs")
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
@@ -113,6 +113,7 @@ func TextToSpeech(voiceID string, text string)  []byte {
 
 
 func GetVoiceIDs() ([]string, error) {
+	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
 		os.Exit(1)
@@ -153,6 +154,7 @@ func GetVoiceIDs() ([]string, error) {
 
 
 func AddSharedVoice(publicUserID, voiceID, newName string) error {
+	fmt.Printf("Attempting to add voice %s from userID %s and set name to %s", voiceID, publicUserID, newName)
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
@@ -185,6 +187,9 @@ func AddSharedVoice(publicUserID, voiceID, newName string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		fmt.Println(resp)
+		body, _:= io.ReadAll(resp.Body)
+		fmt.Println(body)
 		return fmt.Errorf("failed to add voice, status code: %d", resp.StatusCode)
 	}
 
