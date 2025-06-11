@@ -3,6 +3,7 @@ package gg_eleven
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,7 +17,7 @@ func GenerateSoundEffect(text string) ([]byte, error) {
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
-		os.Exit(1)
+		return nil, errors.New("SET YOUR API KEY, MORON")
 	}
 
 	body, err := json.Marshal(map[string]string{
@@ -25,7 +26,7 @@ func GenerateSoundEffect(text string) ([]byte, error) {
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshalling JSON: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	req, _ := http.NewRequest("POST", "https://api.elevenlabs.io/v1/sound-generation", bytes.NewBuffer(body))
@@ -41,23 +42,23 @@ func GenerateSoundEffect(text string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		fmt.Fprintf(os.Stderr, "Error from ElevenLabs API (Status %d): %s\n", resp.StatusCode, string(bodyBytes))
-		os.Exit(1)
+		return nil, err
 	}
 
 	audioBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR ERROR ERROR")
-		os.Exit(1)
+		return nil, err
 	}
 	return audioBytes, nil
 }
 
-func TextToSpeech(voiceID string, text string)  []byte {
+func TextToSpeech(voiceID string, text string)  ([]byte, error) {
 	fmt.Println("Sending request to Elevenlabs")
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
-		os.Exit(1)
+		return nil, errors.New("SET YOUR API KEY, MORON")
 	}
 
 	url := fmt.Sprintf("https://api.elevenlabs.io/v1/text-to-speech/%s", voiceID)
@@ -76,13 +77,13 @@ func TextToSpeech(voiceID string, text string)  []byte {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshalling JSON: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating request: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	req.Header.Set("Accept", "audio/mpeg")
@@ -94,21 +95,21 @@ func TextToSpeech(voiceID string, text string)  []byte {
 	log.Printf("ELEVENLABS: Got response, status code: %d", resp.StatusCode)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error making request to ElevenLabs: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		fmt.Fprintf(os.Stderr, "Error from ElevenLabs API (Status %d): %s\n", resp.StatusCode, string(bodyBytes))
-		os.Exit(1)
+		return nil, err
 	}
 	audioBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR ERROR ERROR")
-		os.Exit(1)
+		return nil, err
 	}
-	return audioBytes
+	return audioBytes, nil
 }
 
 
@@ -116,7 +117,7 @@ func GetVoiceIDs() ([]string, error) {
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
-		os.Exit(1)
+		return nil, errors.New("SET YOUR API KEY, MORON")
 	}
 	url := "https://api.elevenlabs.io/v1/voices"
 	req, _ := http.NewRequest("GET", url, nil)
@@ -158,7 +159,7 @@ func AddSharedVoice(publicUserID, voiceID, newName string) error {
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "Error: ELEVENLABS_API_KEY environment variable not set.")
-		os.Exit(1)
+		return errors.New("SET YOUR API KEY, MORON")
 	}
 
 	url := fmt.Sprintf("https://api.elevenlabs.io/v1/voices/add/%s/%s", publicUserID, voiceID)
